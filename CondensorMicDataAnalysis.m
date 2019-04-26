@@ -17,28 +17,33 @@
 %   Last Revised: April 24th, 2019
 %________________________________________________________________________________________________________________________
 
+clear
+clc
+
 audioFile = uigetfile('*.tdms', 'Multiselect', 'off');
-[convertedData, ~] = ConvertTDMS_CM(0, audioFile);
-audioData = convertedData.Data.MeasuredData.Data;
 samplingRate = input('Input the sampling rate: '); disp(' ')
+[convertedData, ~] = ConvertTDMS_CM(0, audioFile);
+audioData = detrend(convertedData.Data.MeasuredData.Data, 'constant');
 
 params.Fs = samplingRate;
-params.fpass = [100 1/samplingRate];
-params.tapers = [3 5];
-params.err = [2 0.95];
-movingwin = [5 1/5];
+params.tapers = [3 5];   % Tapers [n, 2n - 1]
+params.pad = 1;
+params.fpass = [100 (samplingRate/2)];   % Pass band [0, nyquist] 
+params.trialave = 1;
+params.err = [2 0.05];
 
-disp('Running spectral analysis...'); disp(' ')
+disp('Running spectral analysis - This may take a while.'); disp(' ')
 [S_ps, f_ps, ~] = mtspectrumc_CM(audioData, params);
-[S, t, f, ~] = mtspecgramc(audioData, movingwin, params);
 
 figure('NumberTitle', 'off', 'Name', 'Condensor Microphone Audio');
-subplot(3,1,1)
+subplot(2,1,1)
 plot((1:length(audioData))/samplingRate, audioData, 'k');
 title('Raw audio (voltage) data')
 xlabel('Time (sec)')
 ylabel('Volts (v)')
 
-subplot(3,1,2)
-
-subplot(3,1,3)
+subplot(2,1,2)
+loglog(f_ps, S_ps, 'k')
+title('Power Spectrum')
+xlabel('Frequency (Hz)')
+ylabel('Power')
