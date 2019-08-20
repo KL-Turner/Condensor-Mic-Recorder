@@ -28,12 +28,14 @@ audioData = detrend(convertedData.Data.MeasuredData.Data, 'constant');
 params.Fs = samplingRate;
 params.tapers = [3 5];   % Tapers [n, 2n - 1]
 params.pad = 1;
-params.fpass = [100 (samplingRate/2)];   % Pass band [0, nyquist] 
+params.fpass = [2000 (samplingRate/2)];   % Pass band [0, nyquist] 
 params.trialave = 1;
 params.err = [2 0.05];
+movingwin = [1 0.1];
 
-disp('Running spectral analysis - This may take a while.'); disp(' ')
+disp('Running spectral analysis - This may take a moment.'); disp(' ')
 [S_ps, f_ps, ~] = mtspectrumc_CM(audioData, params);
+[S,t,f,~] = mtspecgramc_CM(audioData, movingwin, params);
 
 figure('NumberTitle', 'off', 'Name', 'Condensor Microphone Audio');
 subplot(2,1,1)
@@ -46,4 +48,13 @@ subplot(2,1,2)
 loglog(f_ps, S_ps, 'k')
 title('Power Spectrum')
 xlabel('Frequency (Hz)')
+xlim([2000 100000])
 ylabel('Power')
+
+figure;
+imagesc(t,f,S')
+title('Audio Spectrogram')
+xlabel('Time (sec)')
+ylabel('Frequency (Hz)')
+axis xy
+caxis([1e-13 1e-10])
