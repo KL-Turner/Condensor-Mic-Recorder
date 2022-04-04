@@ -17,63 +17,44 @@
 %   Last Revised: April 24th, 2019
 %________________________________________________________________________________________________________________________
 
-clear
-clc
-
-audioFile = uigetfile('*.tdms', 'Multiselect', 'off');
+clear; clc
+audioFile = uigetfile('*.tdms','Multiselect','off');
 % samplingRate = input('Input the sampling rate: '); disp(' ')
-samplingRate = 200000;
-[convertedData, ~] = ConvertTDMS_CM(0, audioFile);
-audioData = detrend(convertedData.Data.MeasuredData.Data, 'constant');
-
+samplingRate = 300000;
+[convertedData, ~] = ConvertTDMS_CM(0,audioFile);
+audioData = detrend(convertedData.Data.MeasuredData.Data,'constant');
 %% Parameters for spectral analysis
 params.Fs = samplingRate;
-params.tapers = [3 5];   % Tapers [n, 2n - 1]
+params.tapers = [1,1];   % Tapers [n, 2n - 1]
 params.pad = 1;
-params.fpass = [2000 (samplingRate/2)];   % Pass band [0, nyquist] - mic isn't sensitive below 2 kHz
+params.fpass = [2000,(samplingRate/2)];   % Pass band [0, nyquist] - mic isn't sensitive below 10 kHz
 params.trialave = 1;
-params.err = [2 0.05];
-movingwin = [1 0.1];
-
+params.err = [2,0.05];
+movingwin = [1,0.1];
 disp('Running spectral analysis - This may take a moment.'); disp(' ')
-[S_ps, f_ps, ~] = mtspectrumc_CM(audioData, params);
-[S,t,f,~] = mtspecgramc_CM(audioData, movingwin, params);
-
+[S_ps, f_ps, ~] = mtspectrumc_CM(audioData,params);
+[S,t,f,~] = mtspecgramc_CM(audioData,movingwin,params);
 % scaling for spectrogram - limits of caxis are mean of top/bottom 5% of points in spectrogram
-Svec = sort(S(:), 'descend');
-numSamples = floor(0.05*length(S));
-cMin = mean(S(1:numSamples));
-cMax =  mean(S(end-numSamples:end));
-
+cortBaseline = mean(S(1:30*10,:)',2);
+normCortS = ((S' - cortBaseline)./cortBaseline).*100;
 %% Summary figure(s)
-figure('NumberTitle', 'off', 'Name', 'Condensor Microphone Audio');
+figure('NumberTitle','off','Name','Condensor Microphone Audio');
 subplot(2,1,1)
-plot((1:length(audioData))/samplingRate, audioData, 'k');
+plot((1:length(audioData))/samplingRate,audioData,'k');
 title('Raw audio (voltage) data')
 xlabel('Time (sec)')
 ylabel('Volts (v)')
-
 subplot(2,1,2)
-loglog(f_ps, S_ps, 'k')
+loglog(f_ps,S_ps,'k')
 title('Power Spectrum')
 xlabel('Frequency (Hz)')
-xlim([2000 (samplingRate/2)])
+xlim([2000,(samplingRate/2)])
 ylabel('Power')
-
 figure;
-imagesc(t,f,S')
+imagesc(t,f,normCortS)
 title('Audio Spectrogram')
 xlabel('Time (sec)')
 ylabel('Frequency (Hz)')
 axis xy
-caxis([cMin cMax])
-colorbar
-
-figure;
-semilog_imagesc_CM(t,f,S','y')
-title('Audio Spectrogram (log-scale)')
-xlabel('Time (sec)')
-ylabel('Frequency (Hz)')
-axis xy
-caxis([cMin cMax])
+caxis([-100,100])
 colorbar
